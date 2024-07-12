@@ -139,10 +139,10 @@ void OWRead_bytes(uint8_t* buffer, int size)
 }
 
 
-// CRC bytes, read elements 0 - size through crc generator. 
+// CRC bytes, read elements [0 to size] through crc generator. 
 // crc8 value should match the crc produced my device if only the data is 
 // used to generate the crc value.
-// Alternitivly, pass the data and the give crc, the function should 
+// Alternitivly, pass the data and the crc from the device, the function should 
 // return 0.
 int OWCRC_bytes(uint8_t* byte_array, int size)
 {
@@ -419,83 +419,4 @@ int OWSearch(void)
 		search_result = FALSE;
 	}
 	return search_result;
-}
-//--------------------------------------------------------------------------
-// Verify the device with the ROM number in ROM_NO buffer is present.
-// Return TRUE : device verified present
-// FALSE : device not present
-//
-int OWVerify(void)
-{
-	unsigned char rom_backup[8];
-	int i,rslt,ld_backup,ldf_backup,lfd_backup;
-	// keep a backup copy of the current state
-	for (i = 0; i < 8; i++)
-	{
-		rom_backup[i] = ROM_NO[i];
-	}
-	ld_backup = LastDiscrepancy;
-	ldf_backup = LastDeviceFlag;
-	lfd_backup = LastFamilyDiscrepancy;
-	// set search to find the same device
-	LastDiscrepancy = 64;
-	LastDeviceFlag = FALSE;
-	if (OWSearch())
-	{
-		// check if same device found
-		rslt = TRUE;
-		for (i = 0; i < 8; i++)
-		{
-			if (rom_backup[i] != ROM_NO[i])
-			{
-				rslt = FALSE;
-				break;
-			}
-		}
-	}
-	else
-
-	rslt = FALSE;
-	// restore the search state 
-	for (i = 0; i < 8; i++)
-	{
-		ROM_NO[i] = rom_backup[i];
-	}
-	LastDiscrepancy = ld_backup;
-	LastDeviceFlag = ldf_backup;
-	LastFamilyDiscrepancy = lfd_backup;
-	// return the result of the verify
-	return rslt;
-}
-//--------------------------------------------------------------------------
-// Setup the search to find the device type 'family_code' on the next call
-// to OWNext() if it is present.
-//
-void OWTargetSetup(unsigned char family_code)
-{
-	int i;
-	// set the search state to find SearchFamily type devices
-	ROM_NO[0] = family_code;
-	for (i = 1; i < 8; i++)
-	{
-		ROM_NO[i] = 0;
-	}
-	LastDiscrepancy = 64;
-	LastFamilyDiscrepancy = 0;
-	LastDeviceFlag = FALSE;
-}
-//--------------------------------------------------------------------------
-// Setup the search to skip the current device type on the next call
-// to OWNext().
-//
-void OWFamilySkipSetup(void)
-{
-	// set the Last discrepancy to last family discrepancy
-	LastDiscrepancy = LastFamilyDiscrepancy;
-	LastFamilyDiscrepancy = 0;
-	// check for end of list
-	if (LastDiscrepancy == 0)
-	{
-		LastDeviceFlag = TRUE;
-	}
 }

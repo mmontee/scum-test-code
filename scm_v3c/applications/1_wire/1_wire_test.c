@@ -60,13 +60,13 @@ int main(void) {
 // Start -- 1-wire init.===========================================================
 	/*
 	GPIO 0, 1 are configured for bus using "OW_gpio_config();"
-	Declare Tree root.
-	Assign OWSearch_bus()'s output to the Tree root. Returns NULL on fail.
-	Declare array with Tree root member "item_count" elements.
+	Declare List root.
+	Assign OWSearch_bus()'s output to the root. Returns NULL on fail.
+	Declare array with List root member "item_count" elements.
 	Pass both the root and the array to OWGet_rom_array tranfer() moves the list into an array.
 	*/
 	OW_gpio_config(); // config for GPIO_0 = input GPIO_1 = input
-	bus_roms_root_prt_t rom_list_root; //Declaring Tree root.
+	bus_roms_root_prt_t rom_list_root; //Declaring List root.
 	if((rom_list_root = OWSearch_bus()) == NULL)// Try to get the ROMs of all devices
 	{
 		printf("No ROMs Found.\r\n");
@@ -86,6 +86,7 @@ int main(void) {
 	Individual devices can be isolated using OWIsolate_device(ROMS[n]);
 	*/
 		#ifdef DS18B20
+		init_DS18B20(ROMS[0], 100, 10, 12);
 		init_DS18B20(ROMS[1], 100, 10, 12);
 		int count = 1;
 		
@@ -97,14 +98,14 @@ int main(void) {
 			OWIsolate_device(ROMS[1]);
 			printf("Sensor 2 temp = %dC\r\n", get_temp(ROMS[1]));
 			count++;
-			delay_milliseconds_synchronous(5000	, 1);
+			delay_milliseconds_synchronous(2000	, 1);
 		}
 		#endif
 	}
 }
 
 // Routine to configure gpio after mote_init.
-// Taken from the mote_init routine just changed the GPI value
+// Taken from the mote_init routine just changed the GPI/O_enable values
 void OW_gpio_config(void)
 {
 	// Select banks for GPIO inputs
@@ -124,7 +125,7 @@ void OW_gpio_config(void)
 
 #ifdef DS18B20
 // DS18B20 =======================================================================
-// Isolates then configures the DS18B20's alarms and resolution registers.
+// Isolates then configures a DS18B20's alarms and resolution registers.
 // Write all changes to EEPROM
 // config = 9 | 10 | 11 | 12, for resolution bits
 void init_DS18B20(uint64_t device_rom, uint8_t T_h, uint8_t T_l, uint8_t resolution)
@@ -177,7 +178,7 @@ void init_DS18B20(uint64_t device_rom, uint8_t T_h, uint8_t T_l, uint8_t resolut
 	}while(((OWCRC_bytes(scratch_mem, sizeof(scratch_mem) + 1)) != 0) && (cnt <= 10));
 }
 
-
+// Returns temperature data from a given ROM
 uint16_t get_temp(uint64_t device_rom)
 {
 	int delay; // Resolution selects delay
@@ -205,7 +206,7 @@ uint16_t get_temp(uint64_t device_rom)
 	do{
 		OWIsolate_device(device_rom);
 		OWWriteByte(CONVERT_T);// take a temperature reading
-		delay_milliseconds_synchronous(delay, 1); // Let the sensor math
+		delay_milliseconds_synchronous(delay, 1); // Let the sensor think
 
 		OWIsolate_device(device_rom);
 		OWWriteByte(READ_SCRATCH);
@@ -226,7 +227,7 @@ uint16_t get_temp(uint64_t device_rom)
 
 void silence_callback(void)
 {
-	//SHHHHH
+	//SHHHHH!!!!
 }
 #endif
 
