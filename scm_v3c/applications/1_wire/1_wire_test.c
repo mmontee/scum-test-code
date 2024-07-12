@@ -56,12 +56,14 @@ int main(void) {
 	perform_calibration();
 	printf("Initialization Complete.\r\n");
 	rftimer_set_callback_by_id(silence_callback, 1);
+	
 // Start -- 1-wire init.===========================================================
 	/*
-	GPIO 0, 1 are configured. "OW_gpio_config();"
+	GPIO 0, 1 are configured for bus using "OW_gpio_config();"
 	Declare Tree root.
-	Declare array with root member "item_count" elements.
-	Pass both the root and the array to tranfer the lists contents to the array.
+	Assign OWSearch_bus()'s output to the Tree root. Returns NULL on fail.
+	Declare array with Tree root member "item_count" elements.
+	Pass both the root and the array to OWGet_rom_array tranfer() moves the list into an array.
 	*/
 	OW_gpio_config(); // config for GPIO_0 = input GPIO_1 = input
 	bus_roms_root_prt_t rom_list_root; //Declaring Tree root.
@@ -73,7 +75,7 @@ int main(void) {
 	{
 		uint64_t ROMS[rom_list_root->item_count]; // Declare array with root member "item_count" elements.
 		OWGet_rom_array(ROMS, rom_list_root); // Store ROMs in array, frees linked list
-	// END -- 1-wire init.=============================================================	
+// END -- 1-wire init.=============================================================	
 		for(int i = 0; i < sizeof(ROMS) / sizeof(uint64_t); i++)// Print all ROMs
 		{
 			printf("0x%llX\r\n", ROMS[i]);
