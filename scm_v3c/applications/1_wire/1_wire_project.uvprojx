@@ -493,6 +493,16 @@
               <FileType>5</FileType>
               <FilePath>..\..\1_wire.h</FilePath>
             </File>
+            <File>
+              <FileName>DS18B20.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\DS18B20.c</FilePath>
+            </File>
+            <File>
+              <FileName>DS18B20.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\DS18B20.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

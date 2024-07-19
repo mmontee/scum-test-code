@@ -9,14 +9,76 @@
 #include "memory_map.h"
 #include "1_wire.h"
 
-// 1-wire search rom, code taken from; =====================================*
+
+// 1wire-search-algorithm, code below taken from;
 // https://www.analog.com/en/resources/app-notes/1wire-search-algorithm.html
 unsigned char ROM_NO[8]; // Rom bytes are put here on search
 int LastDiscrepancy;
 int LastFamilyDiscrepancy;
 int LastDeviceFlag;
 unsigned char crc8;
-//==========================================================================*
+
+// Routine to configure gpio after mote_init.
+// Taken from the mote_init routine just changed the GPI/O_enable values
+// GPO are set default, just turn on the RX GPI and turn off the GPO for the RX pin.
+inline void OW_gpio_config(int rx)
+{
+	uint16_t gpi_mask = (0x01 << rx);
+	uint16_t gpo_mask = (0x01 << rx);
+
+	// Select banks for GPIO inputs
+	GPI_control(0, 0, 0, 0);  // 1 in 3rd arg connects GPI8 to EXT_INTERRUPT<1>
+	// Select banks for GPIO outputs
+	GPO_control(6, 6, 6, 6);  // 0 in 3rd arg connects clk_3wb to GPO8 for 3WB cal
+	// Set GPI enables
+	GPI_enables(gpi_mask |= 0x0000); // enable GPIO 1 as RX for 1-wire
+	printf("gpi mask = 0x%X\r\n", gpi_mask);
+	// Set GPO enables
+	GPO_enables(~(gpo_mask &= 0xFFFF)); // GPIO 0 is 1-wire TX, turn off output on RX
+	printf("gpo mask = 0x%X\r\n", gpi_mask);
+	#ifdef HF_CLOCK
+	// Set HCLK source as HF_CLOCK
+	set_asc_bit(1147);//****
+	// Set RFTimer source as HF_CLOCK
+	set_asc_bit(1151);//****
+	// Disable LF_CLOCK
+	set_asc_bit(553);//*****
+	// HF_clock div		
+    set_asc_bit(49);
+    set_asc_bit(48);
+    clear_asc_bit(47);
+    set_asc_bit(46);
+    clear_asc_bit(45);
+    set_asc_bit(44);
+    set_asc_bit(43);
+    set_asc_bit(42);
+	#endif
+	#ifdef LF_CLOCK
+	// Let HCLK source be LF_CLOCK
+	clear_asc_bit(1147);//****
+	// Let RFTimer source be LF_CLOCK
+	clear_asc_bit(1151);//****
+	// Enable LF_CLOCK
+	clear_asc_bit(553);//*****
+	// LF_clock div	
+    set_asc_bit(49);
+    set_asc_bit(48);
+    set_asc_bit(47);
+    clear_asc_bit(46);
+    clear_asc_bit(45);
+    set_asc_bit(44);
+    clear_asc_bit(43);
+    clear_asc_bit(42);
+	#endif
+	
+	// scan chain
+	analog_scan_chain_write();
+	analog_scan_chain_load();
+	// Initialize all pins to be low.
+	GPIO_REG__OUTPUT &= ~0xFFFF;
+	STRONG_PULL_UP_OFF();
+}
+
 // Returns all roms in linked list
 bus_roms_root_prt_t OWSearch_bus(void)
 {
@@ -91,23 +153,14 @@ void OWGet_rom_array(uint64_t* array, bus_roms_root_prt_t root)
 	{
 		bus_roms_list_prt_t prev_rom = rom_n;
 		array[i] = rom_n->rom;
+		printf("Freeing element 0x%llX\r\n", rom_n->rom);
 		rom_n = rom_n->next;
+		
 		free(prev_rom);
 	}
 }
-
-// NOP for short delays. Exact timing needs work.
-// For now it is working
-void OWDelay_us(int us)
-{
-	for(int i = us; i > 0; i--)
-	{
-		__asm("NOP");
-	}
-}
-
 // Reads single byte, use in OWRead_bytes
-uint8_t OWRead_byte(void)
+inline uint8_t OWRead_byte(void)
 {
 	int count = 8;
 	uint8_t data = 0x00;
@@ -172,52 +225,52 @@ int OWIsolate_device(uint64_t device_rom)
 
 // Platform specific function used in 1wire-search-algorithm=================
 // Write a bit to the bus
-void OWWriteBit(uint8_t bit)
+inline void OWWriteBit(uint8_t bit)
 {
 	switch(bit)
 	{
 		case 0x00:
 			BUS_LOW();
-			OWDelay_us(DELAY_C);
+			DELAY_C
 			BUS_RELEASE();
-			OWDelay_us(DELAY_D);
+			DELAY_D
 			break;
 		default:
 			BUS_LOW();
-			OWDelay_us(DELAY_A);
+			DELAY_A
 			BUS_RELEASE();
-			OWDelay_us(DELAY_B);
+			DELAY_B
 			break;
 	}
 }
 
 
 // Reads a byte from the bus.
-uint8_t OWReadBit(void)
+inline uint8_t OWReadBit(void)
 {
 	BUS_LOW();
-	OWDelay_us(DELAY_A);
+	DELAY_A
 	BUS_RELEASE();
-	OWDelay_us(DELAY_E);
+	DELAY_E
 	uint8_t bit = BUS_READ();
-	OWDelay_us(DELAY_F);
+	DELAY_F
 	return bit;
 }
 
 // Return is 1 for presence is detected.
-int OWReset(void)
+inline int OWReset(void)
 {
 	BUS_LOW();
-	OWDelay_us(DELAY_H);
+	DELAY_H
 	BUS_RELEASE();
-	OWDelay_us(DELAY_I);
+	DELAY_I
 	int state = BUS_READ();
-	OWDelay_us(DELAY_J);
+	DELAY_J
 	return !state;
 }
 
 // Sends a byte 
-void OWWriteByte(uint8_t byte)
+inline void OWWriteByte(uint8_t byte)
 {
 	int count = 8;
 	while(count > 0)
@@ -237,8 +290,10 @@ void OWWriteByte(uint8_t byte)
 }
 
 //==========================================================================
-// 1wire-search-algorithm, code taken from;
+// 1wire-search-algorithm, code below taken from;
 // https://www.analog.com/en/resources/app-notes/1wire-search-algorithm.html
+
+
 static unsigned char dscrc_table[] = {
  0, 94,188,226, 97, 63,221,131,194,156,126, 32,163,253, 31, 65,
  157,195, 33,127,252,162, 64, 30, 95, 1,227,189, 62, 96,130,220,
