@@ -21,15 +21,127 @@ unsigned char crc8;
 // Routine to configure gpio after mote_init.
 // Taken from the mote_init routine just changed the GPI/O_enable values
 // GPO are set default, just turn on the RX GPI and turn off the GPO for the RX pin.
-inline void OW_gpio_config(int rx)
+void OW_gpio_config(int rx, int tx, int pull_up)
 {
+	// Set GP0(tx, pull_up) pin set to bank6
+	int bank_n = 6;
+	if(tx < 4 || pull_up < 4)
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(245 + j);
+			} else {
+					clear_asc_bit(245 + j);
+			}
+		}
+	}
+	else if((tx >= 4 && tx < 8) || (pull_up >= 4 && pull_up < 8))
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(249 + j);
+			} else {
+					clear_asc_bit(249 + j);
+			}
+		}
+	}		
+	else if((tx >= 8 && tx < 12) || (pull_up >= 8 && pull_up < 12))
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(253 + j);
+			} else {
+					clear_asc_bit(253 + j);
+			}
+		}
+	}
+	else if((tx >= 12 && tx < 16) || (pull_up >= 12 && pull_up < 16))
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(257 + j);
+			} else {
+					clear_asc_bit(257 + j);
+			}
+		}
+	}
+	else if(tx >= 16 || pull_up >= 16) // out of bounds defaults to bank0
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(245 + j);
+			} else {
+					clear_asc_bit(245 + j);
+			}
+		}		
+	}
+	
+	// Set GPI(rx) pin set to bank0
+	bank_n = 0;
+	if(rx < 4)
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(261 + j);
+			} else {
+					clear_asc_bit(261 + j);
+			}
+		}
+	}
+	else if(rx >= 4 && rx < 8)
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(263 + j);
+			} else {
+					clear_asc_bit(263 + j);
+			}
+		}
+	}		
+	else if(rx >= 8 && rx < 12)
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(265 + j);
+			} else {
+					clear_asc_bit(265 + j);
+			}
+		}
+	}
+	else if(rx >= 12 && rx < 16)
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(267 + j);
+			} else {
+					clear_asc_bit(267 + j);
+			}
+		}
+	}
+	else if(rx >= 16) // out of bounds defaults to bank0
+	{
+		for (int j = 0; j <= 3; j++) 
+		{
+			if ((bank_n >> j) & 0x1) {
+					set_asc_bit(261 + j);
+			} else {
+					clear_asc_bit(261 + j);
+			}
+		}		
+	}	
+	
 	uint16_t gpi_mask = (0x01 << rx);
 	uint16_t gpo_mask = (0x01 << rx);
 
-	// Select banks for GPIO inputs
-	GPI_control(0, 0, 0, 0);  // 1 in 3rd arg connects GPI8 to EXT_INTERRUPT<1>
-	// Select banks for GPIO outputs
-	GPO_control(6, 6, 6, 6);  // 0 in 3rd arg connects clk_3wb to GPO8 for 3WB cal
 	// Set GPI enables
 	GPI_enables(gpi_mask |= 0x0000); // enable GPIO 1 as RX for 1-wire
 	printf("gpi mask = 0x%X\r\n", gpi_mask);
@@ -143,7 +255,7 @@ void OWStore_rom(unsigned char* rom_bytes, bus_roms_list_prt_t base)
 	}
 }
 
-// Moves roms from linked list to array.
+// Moves roms from linked list to array and frees the list. 
 void OWGet_rom_array(uint64_t* array, bus_roms_root_prt_t root)
 {
 	int cnt = root->item_count;
@@ -153,9 +265,7 @@ void OWGet_rom_array(uint64_t* array, bus_roms_root_prt_t root)
 	{
 		bus_roms_list_prt_t prev_rom = rom_n;
 		array[i] = rom_n->rom;
-		printf("Freeing element 0x%llX\r\n", rom_n->rom);
-		rom_n = rom_n->next;
-		
+		rom_n = rom_n->next;	
 		free(prev_rom);
 	}
 }

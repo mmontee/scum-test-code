@@ -14,9 +14,9 @@
 // Enable strong pull-up 
 #define USE_STRONG_PULL 1 // 1 = true, 0 = false
 // GPIO pins are specified here.
-#define TX_PIN 0
-#define RX_PIN 1
-#define STRONG_PULL_UP_PIN 2
+#define TX_PIN 5
+#define RX_PIN 6
+#define STRONG_PULL_UP_PIN 7
 // End Congfig. defines ***
 
 // ROM commands.
@@ -85,17 +85,25 @@ typedef struct rom_list{
 } rom_list_t,	*bus_roms_list_prt_t;
 	
 //=========================== prototypes ======================================
-// User
-bus_roms_root_prt_t OWSearch_bus(void);// Read all roms on bus, returns base to linked list
-void OWGet_rom_array(uint64_t* array, bus_roms_root_prt_t root);// Create array of ROMs from linked list
-void OWWrite_rom(uint64_t device_rom); // Write rom to bus
-int OWIsolate_device(uint64_t device_rom); // Isolate a device
-uint8_t OWRead_byte(void);// Reads a byte from bus
-void OWRead_bytes(uint8_t* buffer, int size);// Reads n bytes from bus
-int OWCRC_bytes(uint8_t* byte_array, int size);
+// User function
+// Configures SCuM I/O for bus, set up banks, leaves all pins except RX at outputs.
+void OW_gpio_config(int rx, int tx, int pull_up);
+// Read all roms on bus, returns base to linked list.
+bus_roms_root_prt_t OWSearch_bus(void);
+// Create an array of ROMs from linked list.
+void OWGet_rom_array(uint64_t* array, bus_roms_root_prt_t root);
+ // Write a rom to bus.
+void OWWrite_rom(uint64_t device_rom);
+// Isolate a device by reseting, geting presence and writing the ROM.
+int OWIsolate_device(uint64_t device_rom); 
+// Reads a byte from bus.
+uint8_t OWRead_byte(void);
+// Reads n bytes from bus.
+void OWRead_bytes(uint8_t* buffer, int size);
+// Returns the CRC8 of a series of bytes.
+int OWCRC_bytes(uint8_t* byte_array, int size); 
 	
 // Driver
-void OW_gpio_config(int tx);
 void OWStore_rom(unsigned char* rom_bytes, bus_roms_list_prt_t base);
 void OWWriteBit(uint8_t bit);
 uint8_t OWReadBit(void);

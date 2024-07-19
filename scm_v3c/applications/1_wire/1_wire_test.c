@@ -49,7 +49,7 @@ int main(void) {
 	Declare array with List root member "item_count" elements.
 	Pass both the root and the array to OWGet_rom_array tranfer() moves the list into an array.
 	*/
-	OW_gpio_config(RX_PIN); // config for GPIO_0 = TX, GPIO_1 = RX, and  GPIO_2 = pull-up
+	OW_gpio_config(RX_PIN, TX_PIN, STRONG_PULL_UP_PIN); // config for GPIO_0 = TX, GPIO_1 = RX, and  GPIO_2 = pull-up
 	bus_roms_root_prt_t rom_list_root; //Declaring List root.
 	if((rom_list_root = OWSearch_bus()) == NULL)// Try to get the ROMs of all devices
 	{
